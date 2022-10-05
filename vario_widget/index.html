@@ -12,19 +12,29 @@
 
   <h1>Vario Widget</h1>
   <pre id="messages" style="border:1px solid black; background-color: lightgray"></pre>
-  <svg id="graph" width="50" height="500" viewBox="0 0 100 1000" style="border: 1px solid black;">
+  <svg version="1.1" xmlns="http://www.w3.org/2000/svg" id="graph" width="50" height="500" viewBox="0 0 100 1000" style="border: 1px solid black;" >
+    <style>
+      .barb {
+        fill: none;
+        stroke: black;
+        stroke-width: 5;
+        stroke-linecap: round
+      }
+    </style>
+
     <defs>
-      <path id="barb5"  d="M 50 80 L 50 10 M 50 70 L 40 75" fill="none" stroke="black" stroke-width="5" stroke-linecap="round"/>
-      <path id="barb10" d="M 50 80 L 50 10 M 50 80 L 30 90" fill="none" stroke="black" stroke-width="5" stroke-linecap="round"/>
-      <path id="barb15" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 40 75" fill="none" stroke="black" stroke-width="5" stroke-linecap="round"/>
-      <path id="barb20" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80" fill="none" stroke="black" stroke-width="5" stroke-linecap="round"/>
-      <path id="barb25" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 40 65" fill="none" stroke="black" stroke-width="5" stroke-linecap="round"/>
-      <path id="barb30" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70" fill="none" stroke="black" stroke-width="5" stroke-linecap="round"/>
-      <path id="barb35" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 40 55" fill="none" stroke="black" stroke-width="5" stroke-linecap="round"/>
-      <path id="barb40" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 30 60" fill="none" stroke="black" stroke-width="5" stroke-linecap="round"/>
-      <path id="barb45" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 30 60 M 50 40 L 40 45" fill="none" stroke="black" stroke-width="5" stroke-linecap="round"/>
-      <path id="barb50"  d="M 50 80 L 50 10 M 50 80 L 30 80 L 50 65" fill="none" stroke="black" stroke-width="5" stroke-linecap="round"/>
+      <path id="barb5"  d="M 50 80 L 50 10 M 50 70 L 40 75" class="barb"/>
+      <path id="barb10" d="M 50 80 L 50 10 M 50 80 L 30 90" class="barb"/>
+      <path id="barb15" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 40 75" class="barb"/>
+      <path id="barb20" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80" class="barb"/>
+      <path id="barb25" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 40 65" class="barb"/>
+      <path id="barb30" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70" class="barb"/>
+      <path id="barb35" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 40 55" class="barb"/>
+      <path id="barb40" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 30 60" class="barb"/>
+      <path id="barb45" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 30 60 M 50 40 L 40 45" class="barb"/>
+      <path id="barb50" d="M 50 80 L 50 10 M 50 80 L 30 80 L 50 65" class="barb"/>
     </defs>
+
     <!-- use x=0 y=100 href="#barb5" transform="rotate(45, 50, 150)"/ -->
     <use x=0 y=0   href="#barb5"/>
     <use x=0 y=100 href="#barb10"/>
@@ -39,7 +49,7 @@
   </svg>
 
   <script type="module">
-    
+
     async function fetch_xcskies_skewt_data(lat, lon) {
       // const url = `https://n3.xcskies.com/skewt/iconeu/20220814/16/00?lat=${lat}&lon=${lon}&single=1`;
       // const response = await fetch(url);
