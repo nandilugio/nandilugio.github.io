@@ -12,7 +12,7 @@
   </script>
 
   <pre id="messages" style="border:1px solid black; background-color: lightgray"></pre>
-  <svg version="1.1" xmlns="http://www.w3.org/2000/svg" id="graph" width="200" height="100%" viewBox="0 0 100 1000" style="border: 1px solid black;" >
+  <svg version="1.1" xmlns="http://www.w3.org/2000/svg" id="graph" width="50" height="1000" viewBox="0 0 100 2000" style="border: 1px solid black;" >
     <style>
       .barb {
         fill: none;
@@ -23,20 +23,21 @@
     </style>
 
     <defs>
-      <path id="barb5"  d="M 50 80 L 50 10 M 50 70 L 40 75" class="barb"/>
-      <path id="barb10" d="M 50 80 L 50 10 M 50 80 L 30 90" class="barb"/>
-      <path id="barb15" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 40 75" class="barb"/>
-      <path id="barb20" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80" class="barb"/>
-      <path id="barb25" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 40 65" class="barb"/>
-      <path id="barb30" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70" class="barb"/>
-      <path id="barb35" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 40 55" class="barb"/>
-      <path id="barb40" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 30 60" class="barb"/>
-      <path id="barb45" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 30 60 M 50 40 L 40 45" class="barb"/>
-      <path id="barb50" d="M 50 80 L 50 10 M 50 80 L 30 80 L 50 65" class="barb"/>
+      <circle id="barb0" class="barb" cx=50 cy=50 r=10 />
+      <path id="barb5" class="barb" d="M 50 80 L 50 10 M 50 70 L 40 75"/>
+      <path id="barb10" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90"/>
+      <path id="barb15" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 40 75"/>
+      <path id="barb20" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80"/>
+      <path id="barb25" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 40 65"/>
+      <path id="barb30" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70"/>
+      <path id="barb35" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 40 55"/>
+      <path id="barb40" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 30 60"/>
+      <path id="barb45" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 30 60 M 50 40 L 40 45"/>
+      <path id="barb50" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 80 L 50 65"/>
     </defs>
 
     <!-- use x=0 y=100 href="#barb5" transform="rotate(45, 50, 150)"/ -->
-    <use x=0 y=0   href="#barb5"/>
+    <!--use x=0 y=0   href="#barb5"/>
     <use x=0 y=100 href="#barb10"/>
     <use x=0 y=200 href="#barb15"/>
     <use x=0 y=300 href="#barb20"/>
@@ -45,7 +46,7 @@
     <use x=0 y=600 href="#barb35"/>
     <use x=0 y=700 href="#barb40"/>
     <use x=0 y=800 href="#barb45"/>
-    <use x=0 y=900 href="#barb50"/>
+    <use x=0 y=900 href="#barb50"/i-->
   </svg>
 
   <script type="module">
@@ -76,12 +77,58 @@
       div.innerHTML += txt;
     }
 
+    function displayBarb(position, windSpeed, windDirection) {
+      const graph = document.getElementById("graph");
+      const barb = document.createElementNS("http://www.w3.org/2000/svg", "use");
+      const y = position * 100;
+      const windSpeedClass = Math.min(Math.round(windSpeed / 5) * 5, 50)
+      barb.setAttributeNS(null, "x", 0);
+      barb.setAttributeNS(null, "y", y);
+      barb.setAttributeNS(null, "transform", `rotate(${windDirection} 50 ${y + 50})`);
+      barb.setAttributeNS(null, "href", `#barb${windSpeedClass}`);
+      graph.appendChild(barb);
+    }
+
+    function average(arr) {
+      const sum = arr.reduce((a, n) => a + n, 0);
+      return sum / arr.length;
+    }
+
     try {
       // const geopos = await get_geopos();
       // const crd = geopos.coords;
       // display(`Lat: ${crd.latitude} Lon: ${crd.longitude} Alt: ${crd.altitude}\n`);
 
-      const graph = document.getElementById("graph");
+      // displayBarb(0,0,2);
+      // displayBarb(1,90,13);
+      // displayBarb(2,90,23);
+
+      const data = await fetch_xcskies_skewt_data(0, 0);
+      console.log(data);
+
+      const topAltitude = 5000;
+      const cellHeight = 250;
+      const numCells = topAltitude / cellHeight;
+      const cellData = [];
+      data.hgts.every((altitude, i) => {
+        if (altitude >= topAltitude) return false;
+        const position = numCells - 1 - Math.floor(altitude / cellHeight);
+        cellData[position] ||= {windSpeeds: [], windDirs: []};
+        cellData[position].windSpeeds.push(data.wspd[0][i]);
+        cellData[position].windDirs.push(data.wdir[0][i]);
+        return true;
+      });
+      const cellValues = cellData.map((cellDatum) => {
+        return {
+          meanWindSpeed: average(cellDatum.windSpeeds),
+          meanWindDir: average(cellDatum.windDirs) // TODO Wrong!!
+        }
+      });
+
+      cellValues.forEach((cellValue, position) => {
+        displayBarb(position, cellValue.meanWindSpeed, cellValue.meanWindDir);
+      });
+
 
     } catch (error) {
       display(error);
