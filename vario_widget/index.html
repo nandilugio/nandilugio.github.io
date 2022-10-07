@@ -95,15 +95,11 @@
     }
 
     try {
-      // const geopos = await get_geopos();
-      // const crd = geopos.coords;
-      // display(`Lat: ${crd.latitude} Lon: ${crd.longitude} Alt: ${crd.altitude}\n`);
+      const geopos = await get_geopos();
+      const crd = geopos.coords;
+      display(`Lat: ${crd.latitude} Lon: ${crd.longitude} Alt: ${crd.altitude}\n`);
 
-      // displayBarb(0,0,2);
-      // displayBarb(1,90,13);
-      // displayBarb(2,90,23);
-
-      const data = await fetch_xcskies_skewt_data(0, 0);
+      const data = await fetch_xcskies_skewt_data(crd.latitude, crd.longitude);
       console.log(data);
 
       const topAltitude = 5000;
@@ -113,13 +109,16 @@
       data.hgts.every((altitude, i) => {
         if (altitude >= topAltitude) return false;
         const position = numCells - 1 - Math.floor(altitude / cellHeight);
-        cellData[position] ||= {windSpeeds: [], windDirs: []};
+        cellData[position] ||= {/*altitudes: [],*/ windSpeeds: [], windDirs: []};
+        // cellData[position].altitudes.push(altitude);
         cellData[position].windSpeeds.push(data.wspd[0][i]);
         cellData[position].windDirs.push(data.wdir[0][i]);
         return true;
       });
-      const cellValues = cellData.map((cellDatum) => {
+      const cellValues = cellData.map((cellDatum, position) => {
         return {
+          // cellAltitudeBottom: (numCells - position -1) * cellHeight,
+          // cellAltitudeTop: (numCells - position) * cellHeight,
           meanWindSpeed: average(cellDatum.windSpeeds),
           meanWindDir: average(cellDatum.windDirs) // TODO Wrong!!
         }
@@ -128,6 +127,9 @@
       cellValues.forEach((cellValue, position) => {
         displayBarb(position, cellValue.meanWindSpeed, cellValue.meanWindDir);
       });
+
+      console.log(cellData);
+      console.log(cellValues);
 
 
     } catch (error) {
