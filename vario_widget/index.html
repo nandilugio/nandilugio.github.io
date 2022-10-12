@@ -1,6 +1,6 @@
 <!doctype html>
-
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <title>Vario Widget</title>
@@ -14,6 +14,7 @@
     }
   </style>
 </head>
+
 <body>
   <script>
     // TODO: remove
@@ -21,6 +22,7 @@
   </script>
 
   <pre id="errors" style="color: red; background-color: orange;"></pre>
+
   <svg version="1.1" xmlns="http://www.w3.org/2000/svg" id="graph" height="100vh" viewBox="0 0 100 2000" style="background-color: white;">
     <style>
       .barb {
@@ -30,7 +32,6 @@
         stroke-linecap: round
       }
     </style>
-
     <defs>
       <circle id="barb0" class="barb" cx=50 cy=50 r=10 />
       <path id="barb5" class="barb" d="M 50 80 L 50 10 M 50 70 L 40 75"/>
@@ -44,18 +45,6 @@
       <path id="barb45" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 30 60 M 50 40 L 40 45"/>
       <path id="barb50" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 80 L 50 65"/>
     </defs>
-
-    <!-- use x=0 y=100 href="#barb5" transform="rotate(45, 50, 150)"/ -->
-    <!--use x=0 y=0   href="#barb5"/>
-    <use x=0 y=100 href="#barb10"/>
-    <use x=0 y=200 href="#barb15"/>
-    <use x=0 y=300 href="#barb20"/>
-    <use x=0 y=400 href="#barb25"/>
-    <use x=0 y=500 href="#barb30"/>
-    <use x=0 y=600 href="#barb35"/>
-    <use x=0 y=700 href="#barb40"/>
-    <use x=0 y=800 href="#barb45"/>
-    <use x=0 y=900 href="#barb50"/i-->
   </svg>
 
   <script type="module">
@@ -82,6 +71,10 @@
       });
     }
 
+    function onGeoposChange(fun) {
+      navigator.geolocation.watchPosition(fun, throwError)
+    }
+
     function displayError(msg) {
       const div = document.getElementById("errors");
       div.innerHTML += msg;
@@ -103,42 +96,55 @@
       return ("0" + n).slice(-2);
     }
 
+		function sum(arr) {
+			return arr.reduce((acc, n) => acc + n, 0);
+		}
+ 
     function average(arr) {
-      const sum = arr.reduce((a, n) => a + n, 0);
-      return sum / arr.length;
+      return sum(arr) / arr.length;
     }
 
-		// Adapted from https://rosettacode.org/wiki/Averages/Mean_angle
-		function sum(a) {
-			var s = 0;
-			for (var i = 0; i < a.length; i++) s += a[i];
-			return s;
-		} 
-		function degToRad(a) {
-			return Math.PI / 180 * a;
+		function deg2rad(deg) {
+			return deg * (Math.PI/180)
 		}
+
+		// Adapted from https://rosettacode.org/wiki/Averages/Mean_angle
 		function meanAngleDeg(a) {
 			const floatMean = 180 / Math.PI * Math.atan2(
 				sum(a.map(degToRad).map(Math.sin)) / a.length,
 				sum(a.map(degToRad).map(Math.cos)) / a.length
 			);
-			// New
+			// my additions
 			const normFloatMean = ((floatMean % 360) + 360) % 360; // constrained to be between 0 and 360
 			return Math.round(normFloatMean);
 		}
 
-    try {
-      const numCells = 20;
+		// From https://stackoverflow.com/questions/18883601/function-to-calculate-distance-between-two-coordinates
+		function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+			var R = 6371; // Radius of the earth in km
+			var dLat = deg2rad(lat2-lat1);  // deg2rad below
+			var dLon = deg2rad(lon2-lon1); 
+			var a = 
+				Math.sin(dLat/2) * Math.sin(dLat/2) +
+				Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+				Math.sin(dLon/2) * Math.sin(dLon/2)
+				; 
+			var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+			var d = R * c; // Distance in km
+			return d;
+		}
 
+    try {
 			const queryParams = new URLSearchParams(window.location.search);
 			const model = queryParams.get("model");
       const topAltitude = parseInt(queryParams.get("top"));
+      const numCells = parseInt(queryParams.get("cells"));
 
       const geopos = await getGeopos();
-      const crd = geopos.coords;
-      console.log(`Lat: ${crd.latitude} Lon: ${crd.longitude} Alt: ${crd.altitude}\n`);
+      const coords = geopos.coords;
+      console.log(`Lat: ${coords.latitude} Lon: ${coords.longitude} Alt: ${coords.altitude}\n`);
 
-      const data = await fetchXcskiesSkewtData(new Date(), crd.latitude, crd.longitude, model);
+      const data = await fetchXcskiesSkewtData(new Date(), coords.latitude, coords.longitude, model);
       console.log(data);
 
       const cellHeight = topAltitude / numCells;
@@ -167,6 +173,8 @@
 
       console.log(cellData);
       console.log(cellValues);
+
+      
 
     } catch (error) {
       displayError(error);
