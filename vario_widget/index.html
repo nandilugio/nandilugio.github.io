@@ -23,13 +23,17 @@
 
   <pre id="errors" style="color: red; background-color: orange;"></pre>
 
-  <svg version="1.1" xmlns="http://www.w3.org/2000/svg" id="graph" height="100vh" viewBox="0 0 100 2000" style="background-color: white;">
+  <svg version="1.1" xmlns="http://www.w3.org/2000/svg" id="graph" height="100vh" viewBox="0 0 100 1000" style="background-color: white;">
     <style>
+      #altitude {
+        stroke: darkblue;
+        stroke-width: 5;
+      }
       .barb {
         fill: none;
         stroke: black;
         stroke-width: 5;
-        stroke-linecap: round
+        stroke-linecap: round;
       }
     </style>
     <defs>
@@ -45,34 +49,84 @@
       <path id="barb45" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 30 60 M 50 40 L 40 45"/>
       <path id="barb50" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 80 L 50 65"/>
     </defs>
+    <line id="altitude" x1=0 y1=0 x2=100 y2=0 />
   </svg>
 
   <script type="module">
 
-    async function fetchXcskiesSkewtData(time, lat, lon, model) {
-      const dateStr = `${time.getUTCFullYear()}${pad2(time.getUTCMonth()+1)}${pad2(time.getDate())}`;
-      const hourStr = pad2(time.getUTCHours());
-      const url = `https://n3.xcskies.com/skewt/${model}/${dateStr}/${hourStr}/00?lat=${lat}&lon=${lon}&single=1&callback=d3.jsonp.zUiFTSuVvVHCoym`;
-      // const response = await fetch(url);
-      // const body = await response.text();
-      // const jsonData = body.slice(25, -1);
-      const jsonData = STUB_SKEWT_DATA;
-      return JSON.parse(jsonData);
+    // Utils /////////////////////////////////////////////////////////////////
+
+    function pad2(n) {
+      return ("0" + n).slice(-2);
     }
 
-    function getGeopos() {
-      const options = {
-        enableHighAccuracy: true,
-        maximumAge: 10000
-      };
+    function sum(arr) {
+      return arr.reduce((acc, n) => acc + n, 0);
+    }
+ 
+    function average(arr) {
+      return sum(arr) / arr.length;
+    }
 
+    function degToRad(deg) {
+      return deg * (Math.PI/180)
+    }
+
+    // Adapted from https://rosettacode.org/wiki/Averages/Mean_angle
+    function meanAngleDeg(a) {
+      const floatMean = 180 / Math.PI * Math.atan2(
+        sum(a.map(degToRad).map(Math.sin)) / a.length,
+        sum(a.map(degToRad).map(Math.cos)) / a.length
+      );
+      // my additions
+      const normFloatMean = ((floatMean % 360) + 360) % 360; // constrain to be between 0 and 360
+      return Math.round(normFloatMean);
+    }
+
+    // From https://stackoverflow.com/questions/18883601/function-to-calculate-distance-between-two-coordinates
+    function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+      var R = 6371; // Radius of the earth in km
+      var dLat = degToRad(lat2-lat1);
+      var dLon = degToRad(lon2-lon1); 
+      var a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(degToRad(lat1)) * Math.cos(degToRad(lat2)) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2)
+        ; 
+      var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+      var d = R * c; // Distance in km
+      return d;
+    }
+
+    // Geopos ////////////////////////////////////////////////////////////////
+
+    function getGeopos() {
       return new Promise((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, options);
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          maximumAge: 10000
+        });
       });
     }
 
-    function onGeoposChange(fun) {
-      navigator.geolocation.watchPosition(fun, throwError)
+    function onGeoposDepartFrom(lat, long, distKm, fun) {
+      navigator.geolocation.watchPosition((geopos) => {
+        const newCoords = geopos.coords;
+        if (getDistanceFromLatLonInKm(lat, long, newCoords.latitude, newCoords.longitude) >= distKm) {
+          fun(geopos);
+        }
+      }, (error) => {
+        throw error;
+      }, {
+        enableHighAccuracy: true,
+        maximumAge: 10000
+      });
+    }
+
+    // UI ////////////////////////////////////////////////////////////////////
+
+    function positionFromAltitude(altitude, cellHeight, numCells) {
+      return numCells - 1 - (altitude / cellHeight); 
     }
 
     function displayError(msg) {
@@ -92,53 +146,36 @@
       graph.appendChild(barb);
     }
 
-    function pad2(n) {
-      return ("0" + n).slice(-2);
+    function displayAltitude(position) {
+      const altMarker = document.getElementById("altitude");      
+      const y = position * 100;
+      altMarker.setAttributeNS(null, "y1", y);
+      altMarker.setAttributeNS(null, "y2", y);
     }
 
-		function sum(arr) {
-			return arr.reduce((acc, n) => acc + n, 0);
-		}
- 
-    function average(arr) {
-      return sum(arr) / arr.length;
+    // XCSkies ///////////////////////////////////////////////////////////////
+
+    async function fetchXcskiesSkewtData(time, lat, lon, model) {
+      const dateStr = `${time.getUTCFullYear()}${pad2(time.getUTCMonth()+1)}${pad2(time.getDate())}`;
+      const hourStr = pad2(time.getUTCHours());
+      const url = `https://n3.xcskies.com/skewt/${model}/${dateStr}/${hourStr}/00?lat=${lat}&lon=${lon}&single=1&callback=d3.jsonp.zUiFTSuVvVHCoym`;
+      const response = await fetch(url);
+      const body = await response.text();
+      const jsonData = body.slice(25, -1);
+      // const jsonData = STUB_SKEWT_DATA;
+      return JSON.parse(jsonData);
     }
 
-		function deg2rad(deg) {
-			return deg * (Math.PI/180)
-		}
-
-		// Adapted from https://rosettacode.org/wiki/Averages/Mean_angle
-		function meanAngleDeg(a) {
-			const floatMean = 180 / Math.PI * Math.atan2(
-				sum(a.map(degToRad).map(Math.sin)) / a.length,
-				sum(a.map(degToRad).map(Math.cos)) / a.length
-			);
-			// my additions
-			const normFloatMean = ((floatMean % 360) + 360) % 360; // constrained to be between 0 and 360
-			return Math.round(normFloatMean);
-		}
-
-		// From https://stackoverflow.com/questions/18883601/function-to-calculate-distance-between-two-coordinates
-		function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-			var R = 6371; // Radius of the earth in km
-			var dLat = deg2rad(lat2-lat1);  // deg2rad below
-			var dLon = deg2rad(lon2-lon1); 
-			var a = 
-				Math.sin(dLat/2) * Math.sin(dLat/2) +
-				Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
-				Math.sin(dLon/2) * Math.sin(dLon/2)
-				; 
-			var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-			var d = R * c; // Distance in km
-			return d;
-		}
+    // Main //////////////////////////////////////////////////////////////////
 
     try {
-			const queryParams = new URLSearchParams(window.location.search);
-			const model = queryParams.get("model");
+      const queryParams = new URLSearchParams(window.location.search);
+      const model = queryParams.get("model");
       const topAltitude = parseInt(queryParams.get("top"));
       const numCells = parseInt(queryParams.get("cells"));
+
+      const graph = document.getElementById("graph");
+      graph.setAttributeNS(null, "viewBox", `0 0 100 ${100 * numCells}`);
 
       const geopos = await getGeopos();
       const coords = geopos.coords;
@@ -151,7 +188,7 @@
       const cellData = [];
       data.hgts.every((altitude, i) => {
         if (altitude >= topAltitude) return false;
-        const position = numCells - 1 - Math.floor(altitude / cellHeight);
+        const position = Math.floor(positionFromAltitude(altitude, cellHeight, numCells));
         cellData[position] ||= {/*altitudes: [],*/ windSpeeds: [], windDirs: []};
         // cellData[position].altitudes.push(altitude);
         cellData[position].windSpeeds.push(data.wspd[0][i] * 1.852); // in kph (orig in knots)
@@ -174,7 +211,14 @@
       console.log(cellData);
       console.log(cellValues);
 
-      
+      const altMarkerPosition = positionFromAltitude(coords.altitude, cellHeight, numCells) + 1;
+      displayAltitude(altMarkerPosition);
+      console.log(altMarkerPosition);
+
+      // Set reload strategies after we've actually rendered the data
+      const reload = ()=>{ window.location.reload(); };
+      onGeoposDepartFrom(coords.latitude, coords.longitude, 1, reload);
+      setTimeout(reload, 40 * 60 * 1000);
 
     } catch (error) {
       displayError(error);
