@@ -52,7 +52,9 @@
   <script type="module">
 
     async function fetch_xcskies_skewt_data(lat, lon) {
-      // const url = `https://n3.xcskies.com/skewt/iconeu/20220814/16/00?lat=${lat}&lon=${lon}&single=1`;
+      const date_str = "20220814"; //TODO
+      const hour_str = "14"; //TODO
+      const url = `https://n3.xcskies.com/skewt/iconeu/${date_str}/${hour_str}/00?lat=${lat}&lon=${lon}&single=1`;
       // const response = await fetch(url);
       // const body = await response.text();
       // const json_data = body.slice(3, -1);
@@ -94,6 +96,25 @@
       return sum / arr.length;
     }
 
+		// Adapted from https://rosettacode.org/wiki/Averages/Mean_angle
+		function sum(a) {
+			var s = 0;
+			for (var i = 0; i < a.length; i++) s += a[i];
+			return s;
+		} 
+		function degToRad(a) {
+			return Math.PI / 180 * a;
+		}
+		function meanAngleDeg(a) {
+			const floatMean = 180 / Math.PI * Math.atan2(
+				sum(a.map(degToRad).map(Math.sin)) / a.length,
+				sum(a.map(degToRad).map(Math.cos)) / a.length
+			);
+			// New
+			const normFloatMean = ((floatMean % 360) + 360) % 360; // constrained to be between 0 and 360
+			return Math.round(normFloatMean);
+		}
+
     try {
       const geopos = await get_geopos();
       const crd = geopos.coords;
@@ -120,7 +141,7 @@
           // cellAltitudeBottom: (numCells - position -1) * cellHeight,
           // cellAltitudeTop: (numCells - position) * cellHeight,
           meanWindSpeed: average(cellDatum.windSpeeds),
-          meanWindDir: average(cellDatum.windDirs) // TODO Wrong!!
+          meanWindDir: meanAngleDeg(cellDatum.windDirs)
         }
       });
 
