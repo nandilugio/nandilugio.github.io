@@ -20,6 +20,12 @@
         stroke-width: 5;
         stroke-linecap: round
       }
+      #altitude {
+        fill: none;
+        stroke: black;
+        stroke-width: 2;
+        stroke-dasharray: 4
+      }
     </style>
 
     <defs>
@@ -34,6 +40,7 @@
       <path id="barb40" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 30 60"/>
       <path id="barb45" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 30 60 M 50 40 L 40 45"/>
       <path id="barb50" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 80 L 50 65"/>
+      <line id="altitude" x1=0 y1=1000 x2=100 y2=1000 />
     </defs>
 
     <!-- use x=0 y=100 href="#barb5" transform="rotate(45, 50, 150)"/ -->
@@ -50,6 +57,9 @@
   </svg>
 
   <script type="module">
+
+    const TOP_ALTITUDE = 5000;
+    const CELL_HEIGHT = 250;
 
     async function fetch_xcskies_skewt_data(lat, lon) {
       // const url = `https://n3.xcskies.com/skewt/iconeu/20220814/16/00?lat=${lat}&lon=${lon}&single=1`;
@@ -80,13 +90,21 @@
     function displayBarb(position, windSpeed, windDirection) {
       const graph = document.getElementById("graph");
       const barb = document.createElementNS("http://www.w3.org/2000/svg", "use");
-      const y = position * 100;
       const windSpeedClass = Math.min(Math.round(windSpeed / 5) * 5, 50)
+      barb.setAttributeNS(null, "href", `#barb${windSpeedClass}`);
+      const y = position * 100;
       barb.setAttributeNS(null, "x", 0);
       barb.setAttributeNS(null, "y", y);
       barb.setAttributeNS(null, "transform", `rotate(${windDirection} 50 ${y + 50})`);
-      barb.setAttributeNS(null, "href", `#barb${windSpeedClass}`);
       graph.appendChild(barb);
+    }
+
+    function displayAltitude(altitude) {
+      const graph = document.getElementById("graph");
+      const marker = document.createElementNS("http://www.w3.org/2000/svg", "use");
+      marker.setAttributeNS(null, "href", `#altitude`);
+      const y = altitude / CELL_HEIGHT;
+      // TODO
     }
 
     function average(arr) {
@@ -97,18 +115,16 @@
     try {
       const geopos = await get_geopos();
       const crd = geopos.coords;
-      display(`Lat: ${crd.latitude} Lon: ${crd.longitude} Alt: ${crd.altitude}\n`);
+      display(`Lat:${crd.latitude}\nLon:${crd.longitude}\nAlt:${crd.altitude}`);
 
       const data = await fetch_xcskies_skewt_data(crd.latitude, crd.longitude);
       console.log(data);
 
-      const topAltitude = 5000;
-      const cellHeight = 250;
-      const numCells = topAltitude / cellHeight;
+      const numCells = TOP_ALTITUDE / CELL_HEIGHT;
       const cellData = [];
       data.hgts.every((altitude, i) => {
-        if (altitude >= topAltitude) return false;
-        const position = numCells - 1 - Math.floor(altitude / cellHeight);
+        if (altitude >= TOP_ALTITUDE) return false;
+        const position = numCells - 1 - Math.floor(altitude / CELL_HEIGHT);
         cellData[position] ||= {/*altitudes: [],*/ windSpeeds: [], windDirs: []};
         // cellData[position].altitudes.push(altitude);
         cellData[position].windSpeeds.push(data.wspd[0][i]);
@@ -117,8 +133,8 @@
       });
       const cellValues = cellData.map((cellDatum, position) => {
         return {
-          // cellAltitudeBottom: (numCells - position -1) * cellHeight,
-          // cellAltitudeTop: (numCells - position) * cellHeight,
+          // cellAltitudeBottom: (numCells - position - 1) * CELL_HEIGHT,
+          // cellAltitudeTop: (numCells - position) * CELL_HEIGHT,
           meanWindSpeed: average(cellDatum.windSpeeds),
           meanWindDir: average(cellDatum.windDirs) // TODO Wrong!!
         }
@@ -130,6 +146,8 @@
 
       console.log(cellData);
       console.log(cellValues);
+
+      
 
 
     } catch (error) {
