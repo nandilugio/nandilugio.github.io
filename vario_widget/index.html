@@ -23,7 +23,8 @@
 
   <pre id="errors" style="color: red; background-color: orange;"></pre>
 
-  <svg version="1.1" xmlns="http://www.w3.org/2000/svg" id="graph" height="100vh" viewBox="0 0 100 1000" style="background-color: white;">
+  <!-- We'll use the whole browser viewport height. viewBox will be set dinamically depending on the number of cells to display. -->
+  <svg version="1.1" xmlns="http://www.w3.org/2000/svg" id="graph" height="100vh" style="background-color: white;">
     <style>
       #altitude {
         stroke: darkblue;
@@ -169,9 +170,6 @@
       const topAltitude = parseInt(queryParams.get("top"));
       const numCells = parseInt(queryParams.get("cells"));
 
-      const graph = document.getElementById("graph");
-      graph.setAttributeNS(null, "viewBox", `0 0 100 ${100 * numCells}`);
-
       const geopos = await getGeopos();
       const coords = geopos.coords;
       console.log(`Lat: ${coords.latitude} Lon: ${coords.longitude} Alt: ${coords.altitude}\n`);
@@ -205,6 +203,10 @@
 
       console.log(cellData);
       console.log(cellValues);
+
+      // Initialize graph
+      const graph = document.getElementById("graph");
+      graph.setAttributeNS(null, "viewBox", `0 0 100 ${100 * numCells}`); // 100 units per cell in vp height
 
       const altMarkerPosition = positionFromAltitude(coords.altitude, cellHeight, numCells) + 1;
       displayAltitude(altMarkerPosition);
