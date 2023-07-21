@@ -99,6 +99,15 @@
       return d;
     }
 
+    function getQueryParam(paramName) {
+      const queryParams = new URLSearchParams(window.location.search);
+      const value = queryParams.get(paramName);
+      if (!(typeof value === 'string' || value instanceof String)) {
+        throw new Error(`Query parameter '${paramName}' is required.`);
+      }
+      return value;       
+    }
+
     // Geopos ////////////////////////////////////////////////////////////////
 
     function getGeopos() {
@@ -165,10 +174,12 @@
     // Main //////////////////////////////////////////////////////////////////
 
     try {
-      const queryParams = new URLSearchParams(window.location.search);
-      const model = queryParams.get("model");
-      const topAltitude = parseInt(queryParams.get("top"));
-      const numCells = parseInt(queryParams.get("cells"));
+      // Get URL query params
+      // General
+      const topAltitude = parseInt(getQueryParam("top")); // Top altitude (amsl) displayed eg. 5000
+      const numCells = parseInt(getQueryParam("cells")); // Number of info cells to display (num. of barbs)
+      // XCSkies
+      const model = getQueryParam("model"); // Meteo model eg. iconeu, gfs...
 
       const geopos = await getGeopos();
       const coords = geopos.coords;
