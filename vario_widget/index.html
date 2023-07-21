@@ -57,10 +57,6 @@
 
     // Utils /////////////////////////////////////////////////////////////////
 
-    function pad2(n) {
-      return ("0" + n).slice(-2);
-    }
-
     function sum(arr) {
       return arr.reduce((acc, n) => acc + n, 0);
     }
@@ -161,6 +157,7 @@
     // XCSkies ///////////////////////////////////////////////////////////////
 
     async function fetchXcskiesSkewtData(time, lat, lon, model) {
+      const pad2 = (n) => ("0" + n).slice(-2);
       const dateStr = `${time.getUTCFullYear()}${pad2(time.getUTCMonth()+1)}${pad2(time.getDate())}`;
       const hourStr = pad2(time.getUTCHours());
       const url = `https://n3.xcskies.com/skewt/${model}/${dateStr}/${hourStr}/00?lat=${lat}&lon=${lon}&single=1&callback=d3.jsonp.zUiFTSuVvVHCoym`;
