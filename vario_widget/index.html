@@ -129,11 +129,6 @@
       return numCells - 1 - (altitude / cellHeight); 
     }
 
-    function displayError(msg) {
-      const div = document.getElementById("errors");
-      div.innerHTML += msg;
-    }
-
     function displayBarb(position, windSpeed, windDirection) {
       const graph = document.getElementById("graph");
       const barb = document.createElementNS("http://www.w3.org/2000/svg", "use");
@@ -221,7 +216,8 @@
       setTimeout(reload, 40 * 60 * 1000);
 
     } catch (error) {
-      displayError(error);
+      const div = document.getElementById("errors");
+      div.innerHTML += error.message;
       throw error;
     }
   </script>
