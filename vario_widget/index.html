@@ -23,7 +23,8 @@
 
   <pre id="errors" style="color: red; background-color: orange;"></pre>
 
-  <!-- We'll use the whole browser viewport height. viewBox will be set dinamically depending on the number of barbs to display. -->
+  <!-- The size of the barbs is 100x100, see paths. This is assumed thruought the whole code. Magic number... ¯\_(ツ)_/¯ -->
+  <!-- We'll use the whole browser viewport height. viewBox height will be set dinamically = numBarbs * 100. -->
   <svg version="1.1" xmlns="http://www.w3.org/2000/svg" id="graph" height="100vh" style="background-color: white;">
     <style>
       #altitude {
@@ -135,8 +136,9 @@
     }
 
     // UI ////////////////////////////////////////////////////////////////////
-    // topAltitude = numBarbs * barbAltRange
-    // viewBoxHeight = numBarbs * 100
+    // barbHeightInViewBox = 100                        // Follows barb path size in the SVG. Magic number... ¯\_(ツ)_/¯
+    // barbAltRange = topAltitude / numBarbs            // 500 = 5000 / 10
+    // viewBoxHeight = numBarbs * barbHeightInViewBox   // 1000 = 10 * 100
 
     function yCoordFromAltitude(altitude, topAltitude, viewBoxHeight) {
       return (topAltitude - altitude) * (viewBoxHeight / topAltitude)
