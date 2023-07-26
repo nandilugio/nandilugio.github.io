@@ -72,7 +72,7 @@
     }
 
     function degToRad(deg) {
-      return deg * (Math.PI/180)
+      return deg * (Math.PI / 180)
     }
 
     // Adapted from https://rosettacode.org/wiki/Averages/Mean_angle
@@ -153,16 +153,15 @@
       const topAltitude = numBarbs * barbAltRange;
 
       // Iterate on all datapoints to get data by barb
-      const rawBarbData = [];
-      xcskiesSkewtData.hgts.every((altitude, i) => {
-        if (altitude >= topAltitude) return false;
-        if (altitude <= 0) return false;
+      const rawBarbData = xcskiesSkewtData.hgts.reduce((acc, altitude, i) => {
+        if (altitude >= topAltitude) return acc;
+        if (altitude <= 0) return acc;
         const barbIdx = Math.floor(numBarbs - (altitude / barbAltRange)); // 0 based idx from top (SVG coords style)
-        rawBarbData[barbIdx] ||= {windSpeeds: [], windDirs: []};
-        rawBarbData[barbIdx].windSpeeds.push(xcskiesSkewtData.wspd[0][i] * 1.852); // in kph (orig in knots)
-        rawBarbData[barbIdx].windDirs.push(xcskiesSkewtData.wdir[0][i]); // in degrees
-        return true;
-      });
+        acc[barbIdx] ||= {windSpeeds: [], windDirs: []};
+        acc[barbIdx].windSpeeds.push(xcskiesSkewtData.wspd[0][i] * 1.852); // in kph (orig in knots)
+        acc[barbIdx].windDirs.push(xcskiesSkewtData.wdir[0][i]); // in degrees
+        return acc;
+      }, []);
 
       // Iterate by barb and calculate metadata
       const barbData = rawBarbData.map((barbDatum, position) => {
