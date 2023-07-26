@@ -135,46 +135,6 @@
       });
     }
 
-    // UI ////////////////////////////////////////////////////////////////////
-    // barbHeightInViewBox = 100                        // Follows barb path size in the SVG. Magic number... ¯\_(ツ)_/¯
-    // barbAltRange = topAltitude / numBarbs            // 500 = 5000 / 10
-    // viewBoxHeight = numBarbs * barbHeightInViewBox   // 1000 = 10 * 100
-
-    function yCoordFromAltitude(altitude, topAltitude, viewBoxHeight) {
-      return (topAltitude - altitude) * (viewBoxHeight / topAltitude)
-    }
-
-    function displayBarbs(barbDisplayData) {
-      barbDisplayData.forEach((barbDatum, barbIdx) => {
-        displayBarb(barbIdx, barbDatum.meanWindSpeed, barbDatum.meanWindDir);
-      });
-    }
-
-    function displayBarb(barbIdx, windSpeed, windDirection) {
-      const graph = document.getElementById("graph");
-      const barb = document.createElementNS("http://www.w3.org/2000/svg", "use");
-      const y = barbIdx * 100;
-      const windSpeedClass = `#barb${Math.min(Math.round(windSpeed / 5) * 5, 50)}`;
-      barb.setAttributeNS(null, "x", 0);
-      barb.setAttributeNS(null, "y", y);
-      barb.setAttributeNS(null, "transform", `rotate(${windDirection} 50 ${y + 50})`);
-      barb.setAttributeNS(null, "href", windSpeedClass);
-      graph.appendChild(barb);
-    }
-
-    function updateAltitude(altitude, topAltitude, viewBoxHeight) {
-      const altMarker = document.getElementById("altitude");
-      const y = yCoordFromAltitude(altitude, topAltitude, viewBoxHeight);
-      altMarker.setAttributeNS(null, "y1", y);
-      altMarker.setAttributeNS(null, "y2", y);
-    }
-
-    function updateGroundHeight(groundAltitude, topAltitude, viewBoxHeight) {
-      const groundBox = document.getElementById("ground");
-      const y = yCoordFromAltitude(groundAltitude, topAltitude, viewBoxHeight);
-      groundBox.setAttributeNS(null, "y", y);
-    }
-
     // XCSkies ///////////////////////////////////////////////////////////////
 
     async function fetchXcskiesSkewTData(time, lat, lon, model) {
@@ -216,6 +176,46 @@
         barbData,
         groundHeight: xcskiesSkewtData.shgt
       };
+    }
+
+    // UI ////////////////////////////////////////////////////////////////////
+    // barbHeightInViewBox = 100                        // Follows barb path size in the SVG. Magic number... ¯\_(ツ)_/¯
+    // barbAltRange = topAltitude / numBarbs            // 500 = 5000 / 10
+    // viewBoxHeight = numBarbs * barbHeightInViewBox   // 1000 = 10 * 100
+
+    function yCoordFromAltitude(altitude, topAltitude, viewBoxHeight) {
+      return (topAltitude - altitude) * (viewBoxHeight / topAltitude)
+    }
+
+    function displayBarbs(barbDisplayData) {
+      barbDisplayData.forEach((barbDatum, barbIdx) => {
+        displayBarb(barbIdx, barbDatum.meanWindSpeed, barbDatum.meanWindDir);
+      });
+    }
+
+    function displayBarb(barbIdx, windSpeed, windDirection) {
+      const graph = document.getElementById("graph");
+      const barb = document.createElementNS("http://www.w3.org/2000/svg", "use");
+      const y = barbIdx * 100;
+      const windSpeedClass = `#barb${Math.min(Math.round(windSpeed / 5) * 5, 50)}`;
+      barb.setAttributeNS(null, "x", 0);
+      barb.setAttributeNS(null, "y", y);
+      barb.setAttributeNS(null, "transform", `rotate(${windDirection} 50 ${y + 50})`);
+      barb.setAttributeNS(null, "href", windSpeedClass);
+      graph.appendChild(barb);
+    }
+
+    function updateAltitude(altitude, topAltitude, viewBoxHeight) {
+      const altMarker = document.getElementById("altitude");
+      const y = yCoordFromAltitude(altitude, topAltitude, viewBoxHeight);
+      altMarker.setAttributeNS(null, "y1", y);
+      altMarker.setAttributeNS(null, "y2", y);
+    }
+
+    function updateGroundHeight(groundAltitude, topAltitude, viewBoxHeight) {
+      const groundBox = document.getElementById("ground");
+      const y = yCoordFromAltitude(groundAltitude, topAltitude, viewBoxHeight);
+      groundBox.setAttributeNS(null, "y", y);
     }
 
     // Main //////////////////////////////////////////////////////////////////
