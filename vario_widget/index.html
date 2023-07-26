@@ -141,15 +141,15 @@
       const graph = document.getElementById("graph");
       const barb = document.createElementNS("http://www.w3.org/2000/svg", "use");
       const y = position * 100;
-      const windSpeedClass = Math.min(Math.round(windSpeed / 5) * 5, 50)
+      const windSpeedClass = `#barb${Math.min(Math.round(windSpeed / 5) * 5, 50)}`;
       barb.setAttributeNS(null, "x", 0);
       barb.setAttributeNS(null, "y", y);
       barb.setAttributeNS(null, "transform", `rotate(${windDirection} 50 ${y + 50})`);
-      barb.setAttributeNS(null, "href", `#barb${windSpeedClass}`);
+      barb.setAttributeNS(null, "href", windSpeedClass);
       graph.appendChild(barb);
     }
 
-    function displayAltitude(position) {
+    function updateAltitude(position) {
       const altMarker = document.getElementById("altitude");      
       const y = position * 100;
       altMarker.setAttributeNS(null, "y1", y);
@@ -219,11 +219,13 @@
       const xcskiesSkewtData = await fetchXcskiesSkewtData(new Date(), coords.latitude, coords.longitude, model);
       const cellData = xcskiesSkewtDataToCellData(xcskiesSkewtData, numCells, cellHeightMtrs)
 
-      // Display all data
+      // Display all data //
+
       cellData.forEach((cellValue, position) => {
         displayBarb(position, cellValue.meanWindSpeed, cellValue.meanWindDir);
       });
-      displayAltitude(positionFromAltitude(coords.altitude, cellHeightMtrs, numCells) + 1);
+      
+      updateAltitude(positionFromAltitude(coords.altitude, cellHeightMtrs, numCells) + 1);
 
       // Set reload strategies to refresh displayed data
       const reload = ()=>{ window.location.reload(); };
