@@ -23,7 +23,7 @@
 
   <pre id="errors" style="color: red; background-color: orange;"></pre>
 
-  <!-- We'll use the whole browser viewport height. viewBox will be set dinamically depending on the number of cells to display. -->
+  <!-- We'll use the whole browser viewport height. viewBox will be set dinamically depending on the number of barbs to display. -->
   <svg version="1.1" xmlns="http://www.w3.org/2000/svg" id="graph" height="100vh" style="background-color: white;">
     <style>
       #altitude {
@@ -136,10 +136,9 @@
 
     // UI ////////////////////////////////////////////////////////////////////
 
-    // Position refers to the cell to display info on, counted from the top (SVG style)
     // Kept as float to use when positioning the altitude marker line
-    function positionFromAltitude(altitude, cellHeight, numCells) {
-      return numCells - 1 - (altitude / cellHeight); 
+    function barbIdxFromAltitude(altitude, barbAltRange, numBarbs) {
+      return numBarbs - 1 - (altitude / barbAltRange); 
     }
 
     function displayBarb(position, windSpeed, windDirection) {
@@ -169,7 +168,7 @@
 
     // XCSkies ///////////////////////////////////////////////////////////////
 
-    async function fetchXcskiesSkewtData(time, lat, lon, model) {
+    async function fetchXcskiesSkewTData(time, lat, lon, model) {
       const pad2 = (n) => ("0" + n).slice(-2);
       const dateStr = `${time.getUTCFullYear()}${pad2(time.getUTCMonth()+1)}${pad2(time.getDate())}`;
       const hourStr = pad2(time.getUTCHours());
@@ -181,34 +180,32 @@
       return JSON.parse(jsonData);
     }
 
-    function xcskiesSkewtDataToCellData(xcskiesSkewtData, numCells, cellHeightMtrs) {
-      const topAltitude = numCells * cellHeightMtrs;
+    function xcskiesSkewtDataToDisplayData(xcskiesSkewtData, numBarbs, barbAltRange) {
+      const topAltitude = numBarbs * barbAltRange;
 
-      // Iterate on all datapoints to get data by cell
-      const rawCellData = [];
+      // Iterate on all datapoints to get data by barb
+      const rawBarbData = [];
       xcskiesSkewtData.hgts.every((altitude, i) => {
         if (altitude >= topAltitude) return false;
-        const position = Math.floor(positionFromAltitude(altitude, cellHeightMtrs, numCells));
-        rawCellData[position] ||= {/*altitudes: [],*/ windSpeeds: [], windDirs: []};
-        // cellData[position].altitudes.push(altitude);
-        rawCellData[position].windSpeeds.push(xcskiesSkewtData.wspd[0][i] * 1.852); // in kph (orig in knots)
-        rawCellData[position].windDirs.push(xcskiesSkewtData.wdir[0][i]); // in degrees
+        const position = Math.floor(barbIdxFromAltitude(altitude, barbAltRange, numBarbs));
+        rawBarbData[position] ||= {windSpeeds: [], windDirs: []};
+        rawBarbData[position].windSpeeds.push(xcskiesSkewtData.wspd[0][i] * 1.852); // in kph (orig in knots)
+        rawBarbData[position].windDirs.push(xcskiesSkewtData.wdir[0][i]); // in degrees
         return true;
       });
 
-      // Iterate on all cells and calculate metadata
-      const cellData = rawCellData.map((cellDatum, position) => {
+      // Iterate by barb and calculate metadata
+      const barbData = rawBarbData.map((barbDatum, position) => {
         return {
-          // cellAltitudeBottom: (numCells - position -1) * cellHeight,
-          // cellAltitudeTop: (numCells - position) * cellHeight,
-          meanWindSpeed: average(cellDatum.windSpeeds),
-          meanWindDir: meanAngleDeg(cellDatum.windDirs)
+          meanWindSpeed: average(barbDatum.windSpeeds),
+          meanWindDir: meanAngleDeg(barbDatum.windDirs)
         }
       });
 
-      cellData.groundHeight = xcskiesSkewtData.shgt;
-
-      return cellData;
+      return {
+        barbData,
+        groundHeight: xcskiesSkewtData.shgt
+      };
     }
 
     // Main //////////////////////////////////////////////////////////////////
@@ -217,32 +214,32 @@
       // Get URL query params
       // General
       const topAltitude = parseInt(getQueryParam("top")); // Top altitude (amsl) displayed eg. 5000
-      const numCells = parseInt(getQueryParam("cells")); // Number of info cells to display (num. of barbs)
+      const numBarbs = parseInt(getQueryParam("barbs")); // Number of barbs to display eg. 10
       // XCSkies
       const model = getQueryParam("model"); // Meteo model eg. iconeu, gfs...
 
       // Initialize graph
       const graph = document.getElementById("graph");
-      graph.setAttributeNS(null, "viewBox", `0 0 100 ${100 * numCells}`); // 100 units per cell in vp height
+      graph.setAttributeNS(null, "viewBox", `0 0 100 ${100 * numBarbs}`); // 100 units per barb in vp height
 
       // Get current geoposition
       const geopos = await getGeopos();
       const coords = geopos.coords;
 
       // Retrieve and parse SkewT data
-      const cellHeightMtrs = topAltitude / numCells;
-      const xcskiesSkewtData = await fetchXcskiesSkewtData(new Date(), coords.latitude, coords.longitude, model);
-      const cellData = xcskiesSkewtDataToCellData(xcskiesSkewtData, numCells, cellHeightMtrs)
+      const barbAltRange = topAltitude / numBarbs;
+      const xcskiesSkewTData = await fetchXcskiesSkewTData(new Date(), coords.latitude, coords.longitude, model);
+      const displayData = xcskiesSkewtDataToDisplayData(xcskiesSkewTData, numBarbs, barbAltRange)
 
       // Display all data //
 
-      cellData.forEach((cellValue, position) => {
-        displayBarb(position, cellValue.meanWindSpeed, cellValue.meanWindDir);
+      displayData.barbData.forEach((barbDatum, position) => {
+        displayBarb(position, barbDatum.meanWindSpeed, barbDatum.meanWindDir);
       });
-      
-      updateAltitude(positionFromAltitude(coords.altitude, cellHeightMtrs, numCells) + 1);
 
-      updateGroundHeight(positionFromAltitude(cellData.groundHeight, cellHeightMtrs, numCells) + 1);
+      updateAltitude(barbIdxFromAltitude(coords.altitude, barbAltRange, numBarbs) + 1);
+
+      updateGroundHeight(barbIdxFromAltitude(displayData.groundHeight, barbAltRange, numBarbs) + 1);
 
       // Set reload strategies to refresh displayed data
       const reload = ()=>{ window.location.reload(); };
