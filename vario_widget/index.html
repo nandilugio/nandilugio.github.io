@@ -30,6 +30,10 @@
         stroke: darkblue;
         stroke-width: 5;
       }
+      #ground {
+        stroke-width: 0;
+        fill: brown;
+      }
       .barb {
         fill: none;
         stroke: black;
@@ -50,6 +54,7 @@
       <path id="barb45" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 30 60 M 50 40 L 40 45"/>
       <path id="barb50" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 80 L 50 65"/>
     </defs>
+    <rect id="ground" x=0 y=1000 width=100 height=1000 />
     <line id="altitude" x1=0 y1=0 x2=100 y2=0 />
   </svg>
 
@@ -150,10 +155,16 @@
     }
 
     function updateAltitude(position) {
-      const altMarker = document.getElementById("altitude");      
+      const altMarker = document.getElementById("altitude");
       const y = position * 100;
       altMarker.setAttributeNS(null, "y1", y);
       altMarker.setAttributeNS(null, "y2", y);
+    }
+
+    function updateGroundHeight(position) {
+      const groundBox = document.getElementById("ground");
+      const y = position * 100;
+      groundBox.setAttributeNS(null, "y", y);
     }
 
     // XCSkies ///////////////////////////////////////////////////////////////
@@ -186,7 +197,7 @@
       });
 
       // Iterate on all cells and calculate metadata
-      return rawCellData.map((cellDatum, position) => {
+      const cellData = rawCellData.map((cellDatum, position) => {
         return {
           // cellAltitudeBottom: (numCells - position -1) * cellHeight,
           // cellAltitudeTop: (numCells - position) * cellHeight,
@@ -194,6 +205,10 @@
           meanWindDir: meanAngleDeg(cellDatum.windDirs)
         }
       });
+
+      cellData.groundHeight = xcskiesSkewtData.shgt;
+
+      return cellData;
     }
 
     // Main //////////////////////////////////////////////////////////////////
@@ -226,6 +241,8 @@
       });
       
       updateAltitude(positionFromAltitude(coords.altitude, cellHeightMtrs, numCells) + 1);
+
+      updateGroundHeight(positionFromAltitude(cellData.groundHeight, cellHeightMtrs, numCells) + 1);
 
       // Set reload strategies to refresh displayed data
       const reload = ()=>{ window.location.reload(); };
