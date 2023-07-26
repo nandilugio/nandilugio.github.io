@@ -43,17 +43,17 @@
       }
     </style>
     <defs>
-      <circle id="barb0" class="barb" cx=50 cy=50 r=10 />
-      <path id="barb5" class="barb" d="M 50 80 L 50 10 M 50 70 L 40 75"/>
-      <path id="barb10" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90"/>
-      <path id="barb15" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 40 75"/>
-      <path id="barb20" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80"/>
-      <path id="barb25" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 40 65"/>
-      <path id="barb30" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70"/>
-      <path id="barb35" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 40 55"/>
-      <path id="barb40" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 30 60"/>
-      <path id="barb45" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 30 60 M 50 40 L 40 45"/>
-      <path id="barb50" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 80 L 50 65"/>
+      <circle id="barb-tpl0" class="barb" cx=50 cy=50 r=10 />
+      <path id="barb-tpl5" class="barb" d="M 50 80 L 50 10 M 50 70 L 40 75"/>
+      <path id="barb-tpl10" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90"/>
+      <path id="barb-tpl15" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 40 75"/>
+      <path id="barb-tpl20" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80"/>
+      <path id="barb-tpl25" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 40 65"/>
+      <path id="barb-tpl30" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70"/>
+      <path id="barb-tpl35" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 40 55"/>
+      <path id="barb-tpl40" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 30 60"/>
+      <path id="barb-tpl45" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 30 60 M 50 40 L 40 45"/>
+      <path id="barb-tpl50" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 80 L 50 65"/>
     </defs>
     <rect id="ground" x=0 y=1000 width=100 height=1000 />
     <line id="altitude" x1=0 y1=0 x2=100 y2=0 />
@@ -187,22 +187,25 @@
       return (topAltitude - altitude) * (viewBoxHeight / topAltitude)
     }
 
-    function displayBarbs(barbDisplayData) {
-      barbDisplayData.forEach((barbDatum, barbIdx) => {
-        displayBarb(barbIdx, barbDatum.meanWindSpeed, barbDatum.meanWindDir);
-      });
-    }
-
-    function displayBarb(barbIdx, windSpeed, windDirection) {
+    function updateBarbs(barbDisplayData) {
       const graph = document.getElementById("graph");
-      const barb = document.createElementNS("http://www.w3.org/2000/svg", "use");
-      const y = barbIdx * 100;
-      const windSpeedClass = `#barb${Math.min(Math.round(windSpeed / 5) * 5, 50)}`;
-      barb.setAttributeNS(null, "x", 0);
-      barb.setAttributeNS(null, "y", y);
-      barb.setAttributeNS(null, "transform", `rotate(${windDirection} 50 ${y + 50})`);
-      barb.setAttributeNS(null, "href", windSpeedClass);
-      graph.appendChild(barb);
+      
+      // Remove all old barbs
+      graph.querySelectorAll('.barb-instance').forEach(e => e.parentNode.removeChild(e));
+
+      // Create all new barbs
+      barbDisplayData.forEach((barbDatum, barbIdx) => {
+        const barb = document.createElementNS("http://www.w3.org/2000/svg", "use");
+        const y = barbIdx * 100;
+        const windBucket = Math.min(Math.round(barbDatum.meanWindSpeed / 5) * 5, 50);
+        const barbTplSelector = `#barb-tpl${windBucket}`;
+        barb.setAttributeNS(null, "class", "barb-instance");
+        barb.setAttributeNS(null, "x", 0);
+        barb.setAttributeNS(null, "y", y);
+        barb.setAttributeNS(null, "transform", `rotate(${barbDatum.meanWindDir} 50 ${y + 50})`);
+        barb.setAttributeNS(null, "href", barbTplSelector);
+        graph.appendChild(barb);
+      });
     }
 
     function updateAltitude(altitude, topAltitude, viewBoxHeight) {
@@ -243,7 +246,7 @@
       const displayData = xcskiesSkewTDataToDisplayData(xcskiesSkewTData, numBarbs, barbAltRange)
 
       // Display all data
-      displayBarbs(displayData.barbData);
+      updateBarbs(displayData.barbData);
       updateAltitude(coords.altitude, topAltitude, viewBoxHeight);
       updateGroundHeight(displayData.groundHeight, topAltitude, viewBoxHeight);
 
