@@ -135,15 +135,23 @@
     }
 
     // UI ////////////////////////////////////////////////////////////////////
+    // topAltitude = numBarbs * barbAltRange
+    // viewBoxHeight = numBarbs * 100
 
     function yCoordFromAltitude(altitude, topAltitude, viewBoxHeight) {
       return (topAltitude - altitude) * (viewBoxHeight / topAltitude)
     }
 
-    function displayBarb(position, windSpeed, windDirection) {
+    function displayBarbs(barbDisplayData) {
+      barbDisplayData.forEach((barbDatum, barbIdx) => {
+        displayBarb(barbIdx, barbDatum.meanWindSpeed, barbDatum.meanWindDir);
+      });
+    }
+
+    function displayBarb(barbIdx, windSpeed, windDirection) {
       const graph = document.getElementById("graph");
       const barb = document.createElementNS("http://www.w3.org/2000/svg", "use");
-      const y = position * 100;
+      const y = barbIdx * 100;
       const windSpeedClass = `#barb${Math.min(Math.round(windSpeed / 5) * 5, 50)}`;
       barb.setAttributeNS(null, "x", 0);
       barb.setAttributeNS(null, "y", y);
@@ -179,17 +187,18 @@
       return JSON.parse(jsonData);
     }
 
-    function xcskiesSkewtDataToDisplayData(xcskiesSkewtData, numBarbs, barbAltRange) {
+    function xcskiesSkewTDataToDisplayData(xcskiesSkewtData, numBarbs, barbAltRange) {
       const topAltitude = numBarbs * barbAltRange;
 
       // Iterate on all datapoints to get data by barb
       const rawBarbData = [];
       xcskiesSkewtData.hgts.every((altitude, i) => {
         if (altitude >= topAltitude) return false;
-        const position = Math.floor(numBarbs - 1 - (altitude / barbAltRange));
-        rawBarbData[position] ||= {windSpeeds: [], windDirs: []};
-        rawBarbData[position].windSpeeds.push(xcskiesSkewtData.wspd[0][i] * 1.852); // in kph (orig in knots)
-        rawBarbData[position].windDirs.push(xcskiesSkewtData.wdir[0][i]); // in degrees
+        if (altitude <= 0) return false;
+        const barbIdx = Math.floor(numBarbs - (altitude / barbAltRange)); // 0 based idx from top (SVG coords style)
+        rawBarbData[barbIdx] ||= {windSpeeds: [], windDirs: []};
+        rawBarbData[barbIdx].windSpeeds.push(xcskiesSkewtData.wspd[0][i] * 1.852); // in kph (orig in knots)
+        rawBarbData[barbIdx].windDirs.push(xcskiesSkewtData.wdir[0][i]); // in degrees
         return true;
       });
 
@@ -229,16 +238,11 @@
       // Retrieve and parse SkewT data
       const barbAltRange = topAltitude / numBarbs;
       const xcskiesSkewTData = await fetchXcskiesSkewTData(new Date(), coords.latitude, coords.longitude, model);
-      const displayData = xcskiesSkewtDataToDisplayData(xcskiesSkewTData, numBarbs, barbAltRange)
+      const displayData = xcskiesSkewTDataToDisplayData(xcskiesSkewTData, numBarbs, barbAltRange)
 
-      // Display all data //
-
-      displayData.barbData.forEach((barbDatum, position) => {
-        displayBarb(position, barbDatum.meanWindSpeed, barbDatum.meanWindDir);
-      });
-
+      // Display all data
+      displayBarbs(displayData.barbData);
       updateAltitude(coords.altitude, topAltitude, viewBoxHeight);
-
       updateGroundHeight(displayData.groundHeight, topAltitude, viewBoxHeight);
 
       // Set reload strategies to refresh displayed data
