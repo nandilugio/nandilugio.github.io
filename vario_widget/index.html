@@ -136,9 +136,8 @@
 
     // UI ////////////////////////////////////////////////////////////////////
 
-    // Kept as float to use when positioning the altitude marker line
-    function barbIdxFromAltitude(altitude, barbAltRange, numBarbs) {
-      return numBarbs - 1 - (altitude / barbAltRange); 
+    function yCoordFromAltitude(altitude, topAltitude, viewBoxHeight) {
+      return (topAltitude - altitude) * (viewBoxHeight / topAltitude)
     }
 
     function displayBarb(position, windSpeed, windDirection) {
@@ -153,16 +152,16 @@
       graph.appendChild(barb);
     }
 
-    function updateAltitude(position) {
+    function updateAltitude(altitude, topAltitude, viewBoxHeight) {
       const altMarker = document.getElementById("altitude");
-      const y = position * 100;
+      const y = yCoordFromAltitude(altitude, topAltitude, viewBoxHeight);
       altMarker.setAttributeNS(null, "y1", y);
       altMarker.setAttributeNS(null, "y2", y);
     }
 
-    function updateGroundHeight(position) {
+    function updateGroundHeight(groundAltitude, topAltitude, viewBoxHeight) {
       const groundBox = document.getElementById("ground");
-      const y = position * 100;
+      const y = yCoordFromAltitude(groundAltitude, topAltitude, viewBoxHeight);
       groundBox.setAttributeNS(null, "y", y);
     }
 
@@ -187,7 +186,7 @@
       const rawBarbData = [];
       xcskiesSkewtData.hgts.every((altitude, i) => {
         if (altitude >= topAltitude) return false;
-        const position = Math.floor(barbIdxFromAltitude(altitude, barbAltRange, numBarbs));
+        const position = Math.floor(numBarbs - 1 - (altitude / barbAltRange));
         rawBarbData[position] ||= {windSpeeds: [], windDirs: []};
         rawBarbData[position].windSpeeds.push(xcskiesSkewtData.wspd[0][i] * 1.852); // in kph (orig in knots)
         rawBarbData[position].windDirs.push(xcskiesSkewtData.wdir[0][i]); // in degrees
@@ -219,8 +218,9 @@
       const model = getQueryParam("model"); // Meteo model eg. iconeu, gfs...
 
       // Initialize graph
+      const viewBoxHeight = 100 * numBarbs; // 100 units per barb in vp height
       const graph = document.getElementById("graph");
-      graph.setAttributeNS(null, "viewBox", `0 0 100 ${100 * numBarbs}`); // 100 units per barb in vp height
+      graph.setAttributeNS(null, "viewBox", `0 0 100 ${viewBoxHeight}`);
 
       // Get current geoposition
       const geopos = await getGeopos();
@@ -237,9 +237,9 @@
         displayBarb(position, barbDatum.meanWindSpeed, barbDatum.meanWindDir);
       });
 
-      updateAltitude(barbIdxFromAltitude(coords.altitude, barbAltRange, numBarbs) + 1);
+      updateAltitude(coords.altitude, topAltitude, viewBoxHeight);
 
-      updateGroundHeight(barbIdxFromAltitude(displayData.groundHeight, barbAltRange, numBarbs) + 1);
+      updateGroundHeight(displayData.groundHeight, topAltitude, viewBoxHeight);
 
       // Set reload strategies to refresh displayed data
       const reload = ()=>{ window.location.reload(); };
