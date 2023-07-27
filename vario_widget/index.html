@@ -63,13 +63,17 @@
 
     // Utils /////////////////////////////////////////////////////////////////
 
+    // Arithmetic
+
     function sum(arr) {
       return arr.reduce((acc, n) => acc + n, 0);
     }
  
-    function average(arr) {
+    function mean(arr) {
       return sum(arr) / arr.length;
     }
+
+    // Geo
 
     function degToRad(deg) {
       return deg * (Math.PI / 180)
@@ -100,6 +104,8 @@
       var d = R * c; // Distance in km
       return d;
     }
+
+    // HTTP
 
     function getQueryParam(paramName) {
       const queryParams = new URLSearchParams(window.location.search);
@@ -166,7 +172,7 @@
       // Iterate by barb and calculate metadata
       const barbData = rawBarbData.map((barbDatum, position) => {
         return {
-          meanWindSpeed: average(barbDatum.windSpeeds),
+          meanWindSpeed: mean(barbDatum.windSpeeds),
           meanWindDir: meanAngleDeg(barbDatum.windDirs)
         }
       });
@@ -183,7 +189,7 @@
     // viewBoxHeight = numBarbs * barbHeightInViewBox   // 1000 = 10 * 100
 
     function yCoordFromAltitude(altitude, topAltitude, viewBoxHeight) {
-      return (topAltitude - altitude) * (viewBoxHeight / topAltitude)
+      return (topAltitude - altitude) * (viewBoxHeight / topAltitude);
     }
 
     function updateBarbs(barbDisplayData) {
