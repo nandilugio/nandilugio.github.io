@@ -105,6 +105,19 @@
       return d;
     }
 
+    // UI
+
+    // From https://stackoverflow.com/a/30144587
+    function gradientSample(color1, color2, weight) {
+      var w1 = weight;
+      var w2 = 1 - w1;
+      var rgb = [Math.round(color1[0] * w1 + color2[0] * w2),
+          Math.round(color1[1] * w1 + color2[1] * w2),
+          Math.round(color1[2] * w1 + color2[2] * w2)];
+      return rgb;
+    }
+
+
     // HTTP
 
     function getQueryParam(paramName) {
@@ -158,27 +171,44 @@
     function xcskiesSkewTDataToDisplayData(xcskiesSkewtData, numBarbs, barbAltRange) {
       const topAltitude = numBarbs * barbAltRange;
 
-      // Iterate on all datapoints to get data by barb
-      const rawBarbData = xcskiesSkewtData.hgts.reduce((acc, altitude, i) => {
+      // Iterate on all datapoints to get data by barb, instability data, etc.
+      var lastAlt = null;
+      var lastTemp = null;
+      const firstProcessingPassData = xcskiesSkewtData.hgts.reduce((acc, altitude, i) => {
         if (altitude >= topAltitude) return acc;
-        if (altitude <= 0) return acc;
+        if (altitude <= 0) return acc; // Just in case...
+
         const barbIdx = Math.floor(numBarbs - (altitude / barbAltRange)); // 0 based idx from top (SVG coords style)
-        acc[barbIdx] ||= {windSpeeds: [], windDirs: []};
-        acc[barbIdx].windSpeeds.push(xcskiesSkewtData.wspd[0][i] * 1.852); // in kph (orig in knots)
-        acc[barbIdx].windDirs.push(xcskiesSkewtData.wdir[0][i]); // in degrees
+        acc.barbs[barbIdx] ||= {windSpeeds: [], windDirs: []};
+        acc.barbs[barbIdx].windSpeeds.push(xcskiesSkewtData.wspd[0][i] * 1.852); // in kph (orig in knots)
+        acc.barbs[barbIdx].windDirs.push(xcskiesSkewtData.wdir[0][i]); // in degrees
+        
+        const currentTemp = xcskiesSkewtData.tmps[0][i];
+        if (lastAlt) {
+          // We assume altitudes ordered low to high
+          const deltaAlt = altitude - lastAlt; // In m, always positive
+          const deltaTemp = currentTemp - lastTemp; // Change while rising in C, normally negative (positive means inversion)
+          acc.instability[altitude] = (deltaTemp / deltaAlt) * 1000; // C/km
+        }
+        lastAlt = altitude;
+        lastTemp = currentTemp;
+
         return acc;
-      }, []);
+      }, { barbs: [], instability: [] });
 
       // Iterate by barb and calculate metadata
-      const barbData = rawBarbData.map((barbDatum, position) => {
+      const barbData = firstProcessingPassData.barbs.map((barbDatum, position) => {
         return {
           meanWindSpeed: mean(barbDatum.windSpeeds),
           meanWindDir: meanAngleDeg(barbDatum.windDirs)
         }
       });
 
+      console.log(firstProcessingPassData.instability);
+
       return {
         barbData,
+        instabilityByAlt: firstProcessingPassData.instability,
         groundHeight: xcskiesSkewtData.shgt
       };
     }
@@ -190,6 +220,35 @@
 
     function yCoordFromAltitude(altitude, topAltitude, viewBoxHeight) {
       return (topAltitude - altitude) * (viewBoxHeight / topAltitude);
+    }
+
+    function instabilityColorFromLapseRate(lapseRate) {
+      // Meteo constants (will never change):
+      //   Isotherm lapse rate: 0 C/Km
+      //   Mean environmental lapse rate: -6.5 C/Km
+      //   Dry adiabatic lapse rate: -9.8 C/Km
+
+      const colorAtMaxInversion = [0,0,200]; // Dark blue
+      const colorAtIsotherm = [0,200,200]; // Pale blue
+      const colorAtMeanEnvLapseRate = [255,200,0]; // Yellow
+      const colorAtDryAdiabat = [255,0,0]; // Red
+      const colorAtMaxInstability = [100,0,0]; // Dark red
+
+      const maxRelevantLapseRate = 10; // C/Km considered inpenetrable inversion
+      if (lapseRate >= 10) { // Inversion
+        return colorAtMaxInversion;
+      } else if (lapseRate >= 0) { // Inversion
+        const colorBalance = (((lapseRate - maxRelevantLapseRate) / maxRelevantLapseRate) ** 3) + 1; // Just x^3 moved so f(0)=0 and f(10)=1. Note f(5)=0.88
+        return gradientSample(colorAtIsotherm, colorAtMaxInversion, colorBalance);
+      } else if (lapseRate >= -6.5) { // Stability
+        const colorBalance = (lapseRate + 6.5) / 6.5; // f(0)=1, f(-6.5)=0
+        return gradientSample(colorAtMeanEnvLapseRate, colorAtIsotherm, colorBalance);
+      } else if (lapseRate >= -9.8) { // Good soaring conditions
+        const colorBalance = (lapseRate + 9.8) / 3.3; // f(-6.5)=1, f(-9.8)=0
+        return gradientSample(colorAtDryAdiabat, colorAtMeanEnvLapseRate, colorBalance);
+      } else { // High instability
+        return colorAtMaxInstability;
+      }
     }
 
     function updateBarbs(barbDisplayData) {
