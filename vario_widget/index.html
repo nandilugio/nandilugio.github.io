@@ -195,13 +195,13 @@
           const deltaAlt = altitude - lastAlt; // In m, always positive
           const deltaTemp = currentTemp - lastTemp; // Change while rising in C, normally negative (positive means inversion)
           const lapseRate = (deltaTemp / deltaAlt) * 1000; // C/km
-          acc.instability.push([altitude, lapseRate]); // the value corresponds to the range between altitude and lastAlt below it
+          acc.instabilityByAlt.push([altitude, lapseRate]); // the value corresponds to the range between altitude and lastAlt below it
         }
         lastAlt = altitude;
         lastTemp = currentTemp;
 
         return acc;
-      }, { barbs: [], instability: [] });
+      }, { barbs: [], instabilityByAlt: [] });
 
       // Iterate by barb and calculate metadata
       const barbData = firstProcessingPassData.barbs.map((barbDatum, position) => {
@@ -213,7 +213,7 @@
 
       return {
         barbData, // Array of {meanWindSpeed in kph, meanWindDir in degrees}
-        instabilityByAlt: firstProcessingPassData.instability, // Array of [altitude in m, lapseRate in C/km] each one corresponding to the range between altitude and the last one below it
+        instabilityByAlt: firstProcessingPassData.instabilityByAlt, // Array of [altitude in m, lapseRate in C/km] each one corresponding to the range between altitude and the last one below it
         groundHeight: xcskiesSkewtData.shgt // in m
       };
     }
