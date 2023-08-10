@@ -27,6 +27,10 @@
   <!-- We'll use the whole browser viewport height. viewBox height will be set dinamically = numBarbs * 100. -->
   <svg version="1.1" xmlns="http://www.w3.org/2000/svg" id="graph" height="100vh" style="background-color: white;">
     <style>
+      #instability-gradient {
+        stroke-width: 0;
+        fill: orangered;
+      }
       #altitude {
         stroke: darkblue;
         stroke-width: 5;
@@ -55,6 +59,8 @@
       <path id="barb-tpl45" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 30 60 M 50 40 L 40 45"/>
       <path id="barb-tpl50" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 80 L 50 65"/>
     </defs>
+    <linearGradient id="instability-gradient" gradientTransform="rotate(90)" />
+    <rect id="instability-box" x=0 y=0 width=100 height=1 fill="url(#instability-gradient)" />
     <rect id="ground" x=0 y=1000 width=100 height=1 />
     <line id="altitude" x1=0 y1=0 x2=100 y2=0 />
   </svg>
@@ -188,7 +194,8 @@
           // We assume altitudes ordered low to high
           const deltaAlt = altitude - lastAlt; // In m, always positive
           const deltaTemp = currentTemp - lastTemp; // Change while rising in C, normally negative (positive means inversion)
-          acc.instability[altitude] = (deltaTemp / deltaAlt) * 1000; // C/km
+          const lapseRate = (deltaTemp / deltaAlt) * 1000; // C/km
+          acc.instability.push([altitude, lapseRate]); // the value corresponds to the range between altitude and lastAlt below it
         }
         lastAlt = altitude;
         lastTemp = currentTemp;
@@ -235,20 +242,42 @@
       const colorAtMaxInstability = [100,0,0]; // Dark red
 
       const maxRelevantLapseRate = 10; // C/Km considered inpenetrable inversion
-      if (lapseRate >= 10) { // Inversion
+      if (lapseRate >= 10) { // (inf,10) Strong inversion
         return colorAtMaxInversion;
-      } else if (lapseRate >= 0) { // Inversion
+      } else if (lapseRate >= 0) { // [10,0) Inversion
         const colorBalance = (((lapseRate - maxRelevantLapseRate) / maxRelevantLapseRate) ** 3) + 1; // Just x^3 moved so f(0)=0 and f(10)=1. Note f(5)=0.88
-        return gradientSample(colorAtIsotherm, colorAtMaxInversion, colorBalance);
-      } else if (lapseRate >= -6.5) { // Stability
+        return gradientSample(colorAtMaxInversion, colorAtIsotherm, colorBalance);
+      } else if (lapseRate >= -6.5) { // [0,-6.5) Stability
         const colorBalance = (lapseRate + 6.5) / 6.5; // f(0)=1, f(-6.5)=0
-        return gradientSample(colorAtMeanEnvLapseRate, colorAtIsotherm, colorBalance);
-      } else if (lapseRate >= -9.8) { // Good soaring conditions
+        return gradientSample(colorAtIsotherm, colorAtMeanEnvLapseRate, colorBalance);
+      } else if (lapseRate >= -9.8) { // [-6.5,-9.8) Good soaring conditions
         const colorBalance = (lapseRate + 9.8) / 3.3; // f(-6.5)=1, f(-9.8)=0
-        return gradientSample(colorAtDryAdiabat, colorAtMeanEnvLapseRate, colorBalance);
-      } else { // High instability
+        return gradientSample(colorAtMeanEnvLapseRate, colorAtDryAdiabat, colorBalance);
+      } else { // [-9.8,-inf) High instability
         return colorAtMaxInstability;
       }
+    }
+
+    function updateInstability(instabilityByAlt, topAltitude, viewBoxHeight) {
+      const gradient = document.getElementById("instability-gradient");
+
+      // Remove all old stops
+      gradient.querySelectorAll('stop').forEach(e => e.parentNode.removeChild(e));
+
+      // Create all new stops
+      instabilityByAlt.reverse().forEach(([altitude, lapseRate]) => {
+        const y = yCoordFromAltitude(altitude, topAltitude, viewBoxHeight);
+        const gradientPercent = ((y / viewBoxHeight) * 100).toFixed(1);
+        const color = instabilityColorFromLapseRate(lapseRate);
+        const stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+        stop.setAttributeNS(null, "offset", `${gradientPercent}%`);
+        stop.setAttributeNS(null, "stop-color", `rgb(${color.join(",")})`);
+        gradient.appendChild(stop);
+      });
+
+      // Ensure the instability box height is initialized (actually only useful 1st time)
+      const box = document.getElementById("instability-box");
+      box.setAttributeNS(null, "height", viewBoxHeight);
     }
 
     function updateBarbs(barbDisplayData) {
@@ -311,6 +340,7 @@
       const displayData = xcskiesSkewTDataToDisplayData(xcskiesSkewTData, numBarbs, barbAltRange)
 
       // Display all data
+      updateInstability(displayData.instabilityByAlt, topAltitude, viewBoxHeight);
       updateBarbs(displayData.barbData);
       updateAltitude(coords.altitude, topAltitude, viewBoxHeight);
       updateGroundHeight(displayData.groundHeight, topAltitude, viewBoxHeight);
