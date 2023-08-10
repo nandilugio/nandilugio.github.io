@@ -211,12 +211,10 @@
         }
       });
 
-      console.log(firstProcessingPassData.instability);
-
       return {
-        barbData,
-        instabilityByAlt: firstProcessingPassData.instability,
-        groundHeight: xcskiesSkewtData.shgt
+        barbData, // Array of {meanWindSpeed in kph, meanWindDir in degrees}
+        instabilityByAlt: firstProcessingPassData.instability, // Array of [altitude in m, lapseRate in C/km] each one corresponding to the range between altitude and the last one below it
+        groundHeight: xcskiesSkewtData.shgt // in m
       };
     }
 
