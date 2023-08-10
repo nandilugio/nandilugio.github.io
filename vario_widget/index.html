@@ -211,6 +211,12 @@
         }
       });
 
+      console.log(firstProcessingPassData.instabilityByAlt);
+      const fake = Array(85).fill().map((element, index) => [4950-(index*50), (index/4.2)-10]);
+      console.log(fake);
+      firstProcessingPassData.instabilityByAlt = fake; // QUIRK: This reverses both arrays! try commenting...
+      // console.log(firstProcessingPassData.instabilityByAlt);
+
       return {
         barbData, // Array of {meanWindSpeed in kph, meanWindDir in degrees}
         instabilityByAlt: firstProcessingPassData.instabilityByAlt, // Array of [altitude in m, lapseRate in C/km] each one corresponding to the range between altitude and the last one below it
