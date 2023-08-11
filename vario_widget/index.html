@@ -58,9 +58,11 @@
       <path id="barb-tpl45" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 90 M 50 70 L 30 80 M 50 60 L 30 70 M 50 50 L 30 60 M 50 40 L 40 45"/>
       <path id="barb-tpl50" class="barb" d="M 50 80 L 50 10 M 50 80 L 30 80 L 50 65"/>
     </defs>
+    <linearGradient id="condensation-clouds-gradient" gradientTransform="rotate(90)" />
     <linearGradient id="instability-gradient" gradientTransform="rotate(90)" />
-    <rect id="instability-box" x=0 y=0 width=100 height=1 fill="url(#instability-gradient)" />
-    <rect id="ground" x=0 y=1000 width=100 height=1 />
+    <rect id="condensation-clouds-box" x=0 y=0 width=25 height=0 fill="url(#condensation-clouds-gradient)" />
+    <rect id="instability-box" x=25 y=0 width=50 height=0 fill="url(#instability-gradient)" />
+    <rect id="ground" x=0 y=1000 width=100 height=0 />
     <line id="altitude" x1=0 y1=0 x2=100 y2=0 />
   </svg>
 
@@ -113,6 +115,7 @@
     // UI
 
     // From https://stackoverflow.com/a/30144587
+    // TODO: is it backwards?
     function gradientSample(color1, color2, weight) {
       var w1 = weight;
       var w2 = 1 - w1;
@@ -199,8 +202,17 @@
         lastAlt = altitude;
         lastTemp = currentTemp;
 
+        // Non-convective Cloud Cover
+        // Loose interpretation of https://flsc.org/portals/12/PDF/Read_Skew_T.pdf
+        // TODO: Are these the right calculations?
+        const MIN_NONCONV_CLOUD_COVER_TEMP_DIFF = 3; // C
+        const tempDiffToDewPoint = xcskiesSkewtData.tmps[0][i] - xcskiesSkewtData.dps[0][i];
+        const cloudCover = tempDiffToDewPoint > MIN_NONCONV_CLOUD_COVER_TEMP_DIFF ? 0 :
+          (MIN_NONCONV_CLOUD_COVER_TEMP_DIFF - tempDiffToDewPoint) * 100 / MIN_NONCONV_CLOUD_COVER_TEMP_DIFF; // in %
+        acc.nonConvCloudCoverByAlt.push([altitude, cloudCover]); // the value corresponds to the range between altitude and lastAlt below it
+
         return acc;
-      }, { barbs: [], instabilityByAlt: [] });
+      }, { barbs: [], instabilityByAlt: [], nonConvCloudCoverByAlt: [] });
 
       // Iterate by barb and calculate metadata
       const barbData = firstProcessingPassData.barbs.map((barbDatum, position) => {
@@ -211,9 +223,10 @@
       });
 
       return {
-        barbData, // Array of {meanWindSpeed in kph, meanWindDir in degrees}
+        barbData, // Array of {meanWindSpeed in kph, meanWindDir in degrees}, top to bottom
         instabilityByAlt: firstProcessingPassData.instabilityByAlt, // Array of [altitude in m, lapseRate in C/km] each one corresponding to the range between altitude and the last one below it
-        groundHeight: xcskiesSkewtData.shgt // in m
+        nonConvCloudCoverByAlt: firstProcessingPassData.nonConvCloudCoverByAlt, // Array of [altitude in m, cloud cover in %] each one corresponding to the range between altitude and the last one below it
+        groundHeight: xcskiesSkewtData.shgt, // in m
       };
     }
 
@@ -224,6 +237,17 @@
 
     function yCoordFromAltitude(altitude, topAltitude, viewBoxHeight) {
       return (topAltitude - altitude) * (viewBoxHeight / topAltitude);
+    }
+
+    function colorFromCloudCoverPercent(cloudCover) {
+      const colorAt0 = [255,255,255]; // White
+      const colorAt1 = [200,200,200]; // Visible enough gray
+      const colorAt100 = [100,100,100]; // Dark gray
+      if (cloudCover < 1) {
+        return colorAt0;
+      } else {
+        return gradientSample(colorAt100, colorAt1, cloudCover / 100);
+      }
     }
 
     function instabilityColorFromLapseRate(lapseRate) {
@@ -255,6 +279,28 @@
       }
     }
 
+    function updateNonConvCloudCover(nonConvCloudCoverByAlt, topAltitude, viewBoxHeight) {
+      const gradient = document.getElementById("condensation-clouds-gradient");
+
+      // Remove all old stops
+      gradient.querySelectorAll('stop').forEach(e => e.parentNode.removeChild(e));
+
+      // Create all new stops
+      nonConvCloudCoverByAlt.reverse().forEach(([altitude, cloudCover]) => {
+        const y = yCoordFromAltitude(altitude, topAltitude, viewBoxHeight);
+        const gradientPercent = ((y / viewBoxHeight) * 100).toFixed(1);
+        const color = colorFromCloudCoverPercent(cloudCover);
+        const stop = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+        stop.setAttributeNS(null, "offset", `${gradientPercent}%`);
+        stop.setAttributeNS(null, "stop-color", `rgb(${color.join(",")})`);
+        gradient.appendChild(stop);
+      });
+
+      // Ensure the box height is initialized (actually only useful 1st time)
+      const box = document.getElementById("condensation-clouds-box");
+      box.setAttributeNS(null, "height", viewBoxHeight);
+    }
+
     function updateInstability(instabilityByAlt, topAltitude, viewBoxHeight) {
       const gradient = document.getElementById("instability-gradient");
 
@@ -272,7 +318,7 @@
         gradient.appendChild(stop);
       });
 
-      // Ensure the instability box height is initialized (actually only useful 1st time)
+      // Ensure the box height is initialized (actually only useful 1st time)
       const box = document.getElementById("instability-box");
       box.setAttributeNS(null, "height", viewBoxHeight);
     }
@@ -337,6 +383,7 @@
       const displayData = xcskiesSkewTDataToDisplayData(xcskiesSkewTData, numBarbs, barbAltRange)
 
       // Display all data
+      updateNonConvCloudCover(displayData.nonConvCloudCoverByAlt, topAltitude, viewBoxHeight)
       updateInstability(displayData.instabilityByAlt, topAltitude, viewBoxHeight);
       updateBarbs(displayData.barbData);
       updateAltitude(coords.altitude, topAltitude, viewBoxHeight);
